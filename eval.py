@@ -7,26 +7,15 @@ from torch.optim.lr_scheduler import StepLR
 from torchvision import transforms
 import torch.nn.init as init
 
-# Download training data from open datasets.
-# data augmentation
 transform = transforms.Compose(
     [
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(10),
-        transforms.RandomResizedCrop(28, scale=(0.8, 1.0)),  # Random crop and resize
+        transforms.RandomHorizontalFlip(),  # Randomly flip images horizontally
+        transforms.RandomRotation(10),  # Randomly rotate images by up to 10 degrees
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,)),
     ]
 )
 
-training_data = datasets.FashionMNIST(
-    root="data",
-    train=True,
-    download=True,
-    transform=transform,
-)
-
-# Download test data from open datasets.
 test_data = datasets.FashionMNIST(
     root="data",
     train=False,
@@ -35,22 +24,8 @@ test_data = datasets.FashionMNIST(
 )
 
 batch_size = 64
-
-# Create data loaders.
-train_dataloader = DataLoader(training_data, batch_size=batch_size, shuffle=True)
 test_dataloader = DataLoader(test_data, batch_size=batch_size)
-
-for X, y in test_dataloader:
-    print(f"Shape of X [N, C, H, W]: {X.shape}")
-    print(f"Shape of y: {y.shape} {y.dtype}")
-    break
-
-# device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
-# print(f"Using {device} device")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-print(f"Using device: {device}")
-# Define model
 
 
 class NeuralNetwork(nn.Module):
@@ -68,7 +43,7 @@ class NeuralNetwork(nn.Module):
         self.fc2 = nn.Linear(512, 10)
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.8)  # Increased dropout
+        self.dropout = nn.Dropout(0.7)  # Increased dropout
         self.initialize_weights()
 
     def initialize_weights(self):
@@ -100,65 +75,7 @@ class NeuralNetwork(nn.Module):
 
 model = NeuralNetwork().to(device)
 print(model)
-
 loss_fn = nn.CrossEntropyLoss()
-# optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
-scheduler = StepLR(optimizer, step_size=10, gamma=0.1)  # Reduce LR every 5 epochs
-
-
-def train(dataloader, model, loss_fn, optimizer):
-    size = len(dataloader.dataset)
-    model.train()
-    for batch, (X, y) in enumerate(dataloader):
-        X, y = X.to(device), y.to(device)
-
-        # Compute prediction error
-        pred = model(X)
-        loss = loss_fn(pred, y)
-
-        # Backpropagation
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)
-        if batch % 100 == 0:
-            loss, current = loss.item(), (batch + 1) * len(X)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-
-
-def test(dataloader, model, loss_fn):
-    try:
-        size = len(dataloader.dataset)
-        num_batches = len(dataloader)
-        model.eval()
-        test_loss, correct = 0, 0
-        with torch.no_grad():
-            for X, y in dataloader:
-                X, y = X.to(device), y.to(device)
-                pred = model(X)
-                test_loss += loss_fn(pred, y).item()
-                correct += (pred.argmax(1) == y).type(torch.float).sum().item()
-        test_loss /= num_batches
-        correct /= size
-        print(
-            f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n"
-        )
-    except Exception as e:  # Catch any exception
-        print(f"Error occurred: {e}")
-
-
-epochs = 5
-for epoch in range(epochs):
-    print(f"Epoch {epoch+1}\n-------------------------------")
-    train(train_dataloader, model, loss_fn, optimizer)
-    test(test_dataloader, model, loss_fn)
-    scheduler.step()
-print("Done!")
-
-torch.save(model.state_dict(), "model.pth")
-print("Saved PyTorch Model State to model.pth")
-
 
 # Ensure the model is in evaluation mode
 model.eval()
@@ -216,7 +133,7 @@ with torch.no_grad():
     print(f'Predicted: "{predicted}", Actual: "{actual}"')
 
 # Optionally, you can print more predictions or analyze the results further
-for i in range(30):
+for i in range(50):
     x, y = test_data[i][0], test_data[i][1]
     with torch.no_grad():
         x = x.to(device)
