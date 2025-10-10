@@ -1,9 +1,10 @@
 <?php
+require_once __DIR__ . '/login.php';
 require_once __DIR__ . '/config.php';
 
 function fetchAllUsers(mysqli $mysqli): array {
     $users = [];
-    $res = $mysqli->query("SELECT id, full_name FROM Users ORDER BY full_name");
+    $res = $mysqli->query("SELECT id, user_name FROM time_stamp_users ORDER BY user_name");
     if ($res) {
         while ($row = $res->fetch_assoc()) {
             $users[] = $row;
@@ -56,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Verify user exists
     if (!$errors && $userId > 0) {
-        $stmt = $mysqli->prepare('SELECT id FROM Users WHERE id = ?');
+        $stmt = $mysqli->prepare('SELECT id FROM time_stamp_users WHERE id = ?');
         $stmt->bind_param('i', $userId);
         $stmt->execute();
         $stmt->store_result();
@@ -67,13 +68,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!$errors) {
-        $stmt = $mysqli->prepare('INSERT INTO Work_Shifts (user_id, work_date, start_time, end_time, notes) VALUES (?, ?, ?, ?, ?)');
+        $stmt = $mysqli->prepare('INSERT INTO time_stamp_shifts (user_id, work_date, start_time, end_time, notes) VALUES (?, ?, ?, ?, ?)');
         $stmt->bind_param('issss', $userId, $workDate, $startTime, $endTime, $notes);
         if ($stmt->execute()) {
             // Fetch computed hours for confirmation (from generated column)
             $insertedId = $stmt->insert_id;
             $stmt->close();
-            $stmt2 = $mysqli->prepare('SELECT total_hours FROM Work_Shifts WHERE id = ?');
+            $stmt2 = $mysqli->prepare('SELECT total_hours FROM time_stamp_shifts WHERE id = ?');
             $stmt2->bind_param('i', $insertedId);
             $stmt2->execute();
             $stmt2->bind_result($totalHours);
@@ -104,8 +105,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
   <div class="container">
     <a class="navbar-brand" href="index.php">Working Hours</a>
-    <div>
-      <a class="btn btn-outline-light" href="shifts.php<?= $selectedUserId ? ('?user_id=' . (int)$selectedUserId) : '' ?>">View Shifts</a>
+    <div class="d-flex gap-2 align-items-center">
+      <span class="text-light small">Signed in as <strong><?= htmlspecialchars($_SESSION['user_name'] ?? 'unknown') ?></strong></span>
+      <a class="btn btn-outline-light btn-sm" href="shifts.php<?= $selectedUserId ? ('?user_id=' . (int)$selectedUserId) : '' ?>">View Shifts</a>
+      <a class="btn btn-warning btn-sm" href="logout.php">Logout</a>
     </div>
   </div>
 </nav>
@@ -132,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <select class="form-select" id="user_id" name="user_id" required>
         <option value="">Select employee...</option>
         <?php foreach ($users as $u): ?>
-          <option value="<?= (int)$u['id'] ?>" <?= $selectedUserId === (int)$u['id'] ? 'selected' : '' ?>><?= htmlspecialchars($u['full_name']) ?></option>
+          <option value="<?= (int)$u['id'] ?>" <?= $selectedUserId === (int)$u['id'] ? 'selected' : '' ?>><?= htmlspecialchars($u['user_name']) ?></option>
         <?php endforeach; ?>
       </select>
       <div class="invalid-feedback">Please select an employee.</div>

@@ -1,11 +1,9 @@
 <?php
+require_once __DIR__ . '/login.php';
 require_once __DIR__ . '/config.php';
 
-// Fetch employees with department name
-$sql = "SELECT u.id, u.full_name, u.email, d.name AS department, u.hourly_rate, u.created_at
-        FROM Users u
-        LEFT JOIN Departments d ON d.id = u.department_id
-        ORDER BY u.full_name";
+// Fetch users (minimal schema on shared host)
+$sql = "SELECT id, user_name, created_at FROM time_stamp_users ORDER BY user_name";
 $result = $mysqli->query($sql);
 if (!$result) {
     http_response_code(500);
@@ -25,23 +23,22 @@ if (!$result) {
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
   <div class="container">
     <a class="navbar-brand" href="index.php">Working Hours</a>
-    <div>
-      <a class="btn btn-outline-light" href="add_shift.php">Add Shift</a>
+    <div class="d-flex gap-2 align-items-center">
+      <span class="text-light small">Signed in as <strong><?= htmlspecialchars($_SESSION['user_name'] ?? 'unknown') ?></strong></span>
+      <a class="btn btn-outline-light btn-sm" href="add_shift.php">Add Shift</a>
+      <a class="btn btn-warning btn-sm" href="logout.php">Logout</a>
     </div>
   </div>
 </nav>
 <div class="container">
   <div class="d-flex align-items-center justify-content-between mb-3">
-    <h1 class="h3 m-0">Employees</h1>
+    <h1 class="h3 m-0">Users</h1>
   </div>
   <div class="table-responsive">
     <table class="table table-striped align-middle">
       <thead>
         <tr>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Department</th>
-          <th>Hourly Rate</th>
+          <th>Username</th>
           <th>Joined</th>
           <th style="width: 200px">Actions</th>
         </tr>
@@ -49,10 +46,7 @@ if (!$result) {
       <tbody>
       <?php while ($row = $result->fetch_assoc()): ?>
         <tr>
-          <td><?= htmlspecialchars($row['full_name']) ?></td>
-          <td><a href="mailto:<?= htmlspecialchars($row['email']) ?>"><?= htmlspecialchars($row['email']) ?></a></td>
-          <td><?= htmlspecialchars($row['department'] ?: '—') ?></td>
-          <td><?= $row['hourly_rate'] !== null ? '$' . number_format((float)$row['hourly_rate'], 2) : '—' ?></td>
+          <td><?= htmlspecialchars($row['user_name']) ?></td>
           <td><?= htmlspecialchars(date('Y-m-d', strtotime($row['created_at']))) ?></td>
           <td>
             <a class="btn btn-sm btn-primary" href="shifts.php?user_id=<?= (int)$row['id'] ?>">View Shifts</a>

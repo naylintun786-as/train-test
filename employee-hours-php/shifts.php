@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/login.php';
 require_once __DIR__ . '/config.php';
 
 $userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
@@ -8,7 +9,7 @@ if ($userId <= 0) {
 }
 
 // Fetch user details
-$stmt = $mysqli->prepare('SELECT u.full_name, u.email, d.name AS department FROM Users u LEFT JOIN Departments d ON d.id = u.department_id WHERE u.id = ?');
+$stmt = $mysqli->prepare('SELECT user_name FROM time_stamp_users WHERE id = ?');
 $stmt->bind_param('i', $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
@@ -21,14 +22,14 @@ if (!$user) {
 }
 
 // Fetch shifts
-$stmt = $mysqli->prepare('SELECT id, work_date, start_time, end_time, notes, total_hours, created_at FROM Work_Shifts WHERE user_id = ? ORDER BY work_date DESC, start_time DESC');
+$stmt = $mysqli->prepare('SELECT id, work_date, start_time, end_time, notes, total_hours, created_at FROM time_stamp_shifts WHERE user_id = ? ORDER BY work_date DESC, start_time DESC');
 $stmt->bind_param('i', $userId);
 $stmt->execute();
 $shiftsRes = $stmt->get_result();
 $stmt->close();
 
 // Summary (total hours)
-$stmt = $mysqli->prepare('SELECT COALESCE(SUM(total_hours), 0) AS total_hours_sum FROM Work_Shifts WHERE user_id = ?');
+$stmt = $mysqli->prepare('SELECT COALESCE(SUM(total_hours), 0) AS total_hours_sum FROM time_stamp_shifts WHERE user_id = ?');
 $stmt->bind_param('i', $userId);
 $stmt->execute();
 $stmt->bind_result($totalHoursSum);
@@ -47,16 +48,17 @@ $stmt->close();
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
   <div class="container">
     <a class="navbar-brand" href="index.php">Working Hours</a>
-    <div>
-      <a class="btn btn-success" href="add_shift.php?user_id=<?= $userId ?>">Add Shift</a>
+    <div class="d-flex gap-2 align-items-center">
+      <span class="text-light small">Signed in as <strong><?= htmlspecialchars($_SESSION['user_name'] ?? 'unknown') ?></strong></span>
+      <a class="btn btn-success btn-sm" href="add_shift.php?user_id=<?= $userId ?>">Add Shift</a>
+      <a class="btn btn-warning btn-sm" href="logout.php">Logout</a>
     </div>
   </div>
 </nav>
 <div class="container">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-      <h1 class="h3 mb-0">Shifts - <?= htmlspecialchars($user['full_name']) ?></h1>
-      <div class="text-muted"><?= htmlspecialchars($user['email']) ?><?= $user['department'] ? ' · ' . htmlspecialchars($user['department']) : '' ?></div>
+      <h1 class="h3 mb-0">Shifts - <?= htmlspecialchars($user['user_name']) ?></h1>
     </div>
     <div class="text-end">
       <div class="fw-semibold">Total Hours</div>
