@@ -1,0 +1,46 @@
+version: "3.9"
+services:
+  web:
+    build: .
+    container_name: employee-hours-web
+    ports:
+      - "8080:80"
+    environment:
+      - DB_HOST=db
+      - DB_NAME=employee_hours
+      - DB_USER=app
+      - DB_PASS=app_pass
+      - DB_PORT=3306
+    depends_on:
+      - db
+    volumes:
+      - ./:/var/www/html
+
+  db:
+    image: mysql:8.0
+    container_name: employee-hours-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_pass
+      - MYSQL_DATABASE=employee_hours
+      - MYSQL_USER=app
+      - MYSQL_PASSWORD=app_pass
+    ports:
+      - "33060:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database.sql:/docker-entrypoint-initdb.d/01_database.sql:ro
+
+  phpmyadmin:
+    image: phpmyadmin:5
+    container_name: employee-hours-pma
+    environment:
+      - PMA_HOST=db
+      - PMA_USER=app
+      - PMA_PASSWORD=app_pass
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+
+volumes:
+  db_data:
